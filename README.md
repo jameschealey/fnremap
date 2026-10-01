@@ -1,13 +1,24 @@
 # FnRemap
 
-Remap the Fn key on Apple Magic Keyboard (USB-C) to Left Control on Windows.
+Remap the Fn and Ctrl keys on Apple Magic Keyboard (USB-C) for Windows.
 
 The Apple Fn key is a vendor-specific HID usage (page 0x00FF, usage 0x0003) that is invisible to standard Windows remapping tools like PowerToys, SharpKeys, or AutoHotkey. This project works around that by replacing the HID driver on the keyboard's vendor-specific interface with WinUSB, reading raw USB reports, and injecting keyboard events via SendInput.
+
+## Key mapping
+
+| Physical key | Sends |
+|---|---|
+| Fn | Left Ctrl |
+| Control | Windows key |
+| Option | Alt (unchanged) |
+| Command (⌘) | Windows key (unchanged) |
+
+This gives you a familiar PC layout with Ctrl at the far left, and a Windows key where Control was. Standard Win+key shortcuts (Win+E, Win+R, Win+D, etc.) work. Win+L (lock screen) does not work due to Windows security restrictions on injected input — use Ctrl+Alt+Del → Lock instead.
 
 ## How it works
 
 1. **WinUSB driver** (`fnremap.inf`) replaces the default HID driver on the keyboard's second USB interface (MI_01), which carries the vendor-specific Fn key data.
-2. **fnremap.exe** reads raw 10-byte HID reports from the USB interrupt endpoint, detects the Fn bit in the Apple vendor byte, and injects Left Control via SendInput.
+2. **fnremap.exe** reads raw 10-byte HID reports from the USB interrupt endpoint, remaps Fn→Ctrl and Ctrl→Win, and injects keyboard events via SendInput.
 3. A **Windows service** launches fnremap.exe in the active user session at boot, with automatic reconnection on keyboard unplug/replug.
 
 ## Requirements
@@ -55,7 +66,8 @@ Unplug and replug the keyboard afterward to restore normal operation. If it does
 ## Important caveats
 
 - **The keyboard only works through fnremap.exe while the WinUSB driver is installed.** The WinUSB driver replaces the standard HID driver on the keyboard interface, so if the service is stopped, the keyboard will stop working until the service is restarted or the driver is uninstalled.
-- **Pre-login screens** (BIOS/UEFI, BitLocker, Windows login): the keyboard works normally at these stages because the WinUSB driver hasn't loaded yet. After Windows login, the service takes over.
+- **Login/lock screen**: the service automatically switches to the active desktop, so the keyboard works at the Windows login and lock screens. BIOS/UEFI and BitLocker screens use the keyboard normally before the WinUSB driver loads.
+- **Win+L does not work**: Windows blocks injected Win+L for security. Use Ctrl+Alt+Del → Lock instead.
 - **Other Magic Keyboard models**: this is configured for PID 0322 (USB-C model). For other models, update the PID in both `fnremap.inf` and recompile. Use Device Manager to find your keyboard's PID.
 
 ## Interactive mode
