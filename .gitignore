@@ -1,0 +1,19 @@
+# Build artifacts
+*.exe
+*.obj
+*.pdb
+*.ilk
+*.exp
+*.lib
+
+# Driver signing artifacts
+*.cat
+*.cer
+
+# Abandoned experiments
+driver/
+hiddiag.c
+fntest.c
+fntest2.c
+fnctrl.py
+fnctrl.obj

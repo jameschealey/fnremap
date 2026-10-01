@@ -1,0 +1,51 @@
+;
+; FnRemap - WinUSB driver for Apple Magic Keyboard MI_01
+; Replaces hidusb so we can read raw USB reports from user mode.
+;
+
+[Version]
+Signature   = "$WINDOWS NT$"
+Class       = USBDevice
+ClassGuid   = {88BAE032-5A81-49f0-BC3D-A4FF138216D6}
+Provider    = %ProviderString%
+DriverVer   = 10/01/2026,2.0.0.0
+CatalogFile = fnremap.cat
+PnpLockdown = 1
+
+[SourceDisksNames]
+1 = %DiskName%
+
+[SourceDisksFiles]
+
+[DestinationDirs]
+DefaultDestDir = 13
+
+[Manufacturer]
+%ManufacturerString% = DeviceList, NTamd64
+
+[DeviceList.NTamd64]
+%DeviceDesc% = WinUsb_Install, USB\VID_05AC&PID_0322&MI_01
+
+; ========== Install ==========
+
+[WinUsb_Install.NT]
+Include = winusb.inf
+Needs   = WINUSB.NT
+
+[WinUsb_Install.NT.Services]
+Include = winusb.inf
+Needs   = WINUSB.NT.Services
+
+[WinUsb_Install.NT.HW]
+AddReg = WinUsb_AddReg
+
+[WinUsb_AddReg]
+HKR,,DeviceInterfaceGUIDs,0x00010000,"{a1c1ef05-7b20-4c2f-8b5a-2e2c4d1e3f06}"
+
+; ========== Strings ==========
+
+[Strings]
+ProviderString     = "FnCtrl"
+ManufacturerString = "FnCtrl"
+DeviceDesc         = "Apple Magic Keyboard (FnRemap WinUSB)"
+DiskName           = "FnRemap Driver Disk"
