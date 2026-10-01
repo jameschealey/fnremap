@@ -66,7 +66,7 @@ Unplug and replug the keyboard afterward to restore normal operation. If it does
 ## Important caveats
 
 - **The keyboard only works through fnremap.exe while the WinUSB driver is installed.** The WinUSB driver replaces the standard HID driver on the keyboard interface, so if the service is stopped, the keyboard will stop working until the service is restarted or the driver is uninstalled.
-- **Login/lock screen**: the service automatically switches to the active desktop, so the keyboard works at the Windows login and lock screens. BIOS/UEFI and BitLocker screens use the keyboard normally before the WinUSB driver loads.
+- **Login/lock screen**: the service automatically switches to the active desktop, so the keyboard works at the Windows login and lock screens. There is a 1–2 second delay before the keyboard responds at the login/lock screen while the service detects the desktop switch. BIOS/UEFI and BitLocker screens use the keyboard normally before the WinUSB driver loads.
 - **Win+L does not work**: Windows blocks injected Win+L for security. Use Ctrl+Alt+Del → Lock instead.
 - **Other Magic Keyboard models**: this is configured for PID 0322 (USB-C model). For other models, update the PID in both `fnremap.inf` and recompile. Use Device Manager to find your keyboard's PID.
 
