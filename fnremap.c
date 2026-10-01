@@ -142,6 +142,24 @@ static BOOL IsExtendedKey(WORD vk)
 static BOOL g_verbose = FALSE;
 static BOOL g_serviceMode = FALSE;
 
+static void SwitchToInputDesktop(void)
+{
+    static HDESK s_hDesk = NULL;
+    static ULONGLONG s_lastCheck = 0;
+    ULONGLONG now = GetTickCount64();
+    if (now - s_lastCheck < 2000) return;
+    s_lastCheck = now;
+
+    HDESK hNew = OpenInputDesktop(0, FALSE, GENERIC_ALL);
+    if (!hNew) return;
+    if (SetThreadDesktop(hNew)) {
+        if (s_hDesk) CloseDesktop(s_hDesk);
+        s_hDesk = hNew;
+    } else {
+        CloseDesktop(hNew);
+    }
+}
+
 static void SendKey(WORD vk, BOOL down)
 {
     INPUT inp = {0};
@@ -169,7 +187,13 @@ static void ProcessKeyboardReport(const BYTE *report)
     BYTE appleByte = report[APPLE_OFFSET];
     BOOL fnNow = (g_fnBit != 0) && (appleByte & g_fnBit);
 
-    /* Fn → Left Ctrl: merge into modifier byte */
+    /* Remap physical Left Ctrl → Left GUI (Windows key) */
+    if (modifiers & MOD_LCTRL) {
+        modifiers &= ~MOD_LCTRL;
+        modifiers |= MOD_LGUI;
+    }
+
+    /* Fn → Left Ctrl */
     if (fnNow)
         modifiers |= MOD_LCTRL;
 
@@ -640,6 +664,9 @@ int main(int argc, char *argv[])
 
         printf("Remapping active.\n");
 
+        if (g_serviceMode)
+            SwitchToInputDesktop();
+
         int errCount = 0;
         while (g_running) {
             if (!WinUsb_ReadPipe(hWinUsb, pipeIn, buf, sizeof(buf), &bytesRead, NULL)) {
@@ -653,6 +680,9 @@ int main(int argc, char *argv[])
                 continue;
             }
             errCount = 0;
+
+            if (g_serviceMode)
+                SwitchToInputDesktop();
 
             if (bytesRead < 2) continue;
 
