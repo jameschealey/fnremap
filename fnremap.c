@@ -180,6 +180,26 @@ static void SendKey(WORD vk, BOOL down)
 static BYTE g_heldKeys[KEY_COUNT] = {0};
 static BYTE g_heldModifiers = 0;
 static BOOL g_fnHeld = FALSE;
+static BOOL g_fnSpaceConsumed = FALSE;
+
+/* Fn+F-key substitutions: when a key is consumed by an Fn combo,
+ * store the substitute VKey so we send the correct UP on release. */
+static WORD g_fnSubstitute[256] = {0};
+
+#define HID_SPACE 0x2C
+
+static WORD FnLayerVKey(BYTE hidUsage)
+{
+    switch (hidUsage) {
+    case 0x40: return VK_MEDIA_PREV_TRACK;  /* F7 */
+    case 0x41: return VK_MEDIA_PLAY_PAUSE;  /* F8 */
+    case 0x42: return VK_MEDIA_NEXT_TRACK;  /* F9 */
+    case 0x43: return VK_VOLUME_MUTE;       /* F10 */
+    case 0x44: return VK_VOLUME_DOWN;       /* F11 */
+    case 0x45: return VK_VOLUME_UP;         /* F12 */
+    }
+    return 0;
+}
 
 static void ProcessKeyboardReport(const BYTE *report)
 {
@@ -229,6 +249,15 @@ static void ProcessKeyboardReport(const BYTE *report)
             if (newKeys[j] == old) { found = TRUE; break; }
         }
         if (!found) {
+            if (old == HID_SPACE && g_fnSpaceConsumed) {
+                g_fnSpaceConsumed = FALSE;
+                continue;
+            }
+            if (g_fnSubstitute[old]) {
+                SendKey(g_fnSubstitute[old], FALSE);
+                g_fnSubstitute[old] = 0;
+                continue;
+            }
             WORD vk = HidToVKey(old);
             if (vk) SendKey(vk, FALSE);
         }
@@ -245,6 +274,28 @@ static void ProcessKeyboardReport(const BYTE *report)
             if (g_heldKeys[j] == cur) { found = TRUE; break; }
         }
         if (!found) {
+            /* Fn+Space → Windows Search (like macOS Cmd+Space → Spotlight) */
+            if (fnNow && cur == HID_SPACE) {
+                g_fnSpaceConsumed = TRUE;
+                SendKey(VK_LCONTROL, FALSE);
+                SendKey(VK_LWIN, TRUE);
+                SendKey('S', TRUE);
+                SendKey('S', FALSE);
+                SendKey(VK_LWIN, FALSE);
+                SendKey(VK_LCONTROL, TRUE);
+                continue;
+            }
+            /* Fn+F7..F12 → media/volume keys (Apple Fn layer) */
+            if (fnNow) {
+                WORD mediaVk = FnLayerVKey(cur);
+                if (mediaVk) {
+                    g_fnSubstitute[cur] = mediaVk;
+                    SendKey(VK_LCONTROL, FALSE);
+                    SendKey(mediaVk, TRUE);
+                    SendKey(VK_LCONTROL, TRUE);
+                    continue;
+                }
+            }
             WORD vk = HidToVKey(cur);
             if (vk) SendKey(vk, TRUE);
         }
